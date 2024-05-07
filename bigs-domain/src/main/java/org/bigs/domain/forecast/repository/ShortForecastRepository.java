@@ -1,6 +1,6 @@
-package org.bigs.forecast.repository;
+package org.bigs.domain.forecast.repository;
 
-import org.bigs.forecast.entity.ShortForecast;
+import org.bigs.domain.forecast.entity.ShortForecast;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

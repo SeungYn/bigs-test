@@ -1,4 +1,4 @@
-package org.bigs.forecast.entity;
+package org.bigs.domain.forecast.entity;
 
 import jakarta.persistence.*;
 import lombok.AccessLevel;
