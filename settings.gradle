@@ -1,3 +1,4 @@
 rootProject.name = 'bigs-test'
 include 'bigs-domain'
+include 'bigs-api'
 
