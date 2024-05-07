@@ -1,7 +1,7 @@
-package org.bigs.fetch;
+package org.bigs.util.fetch;
 
 import lombok.RequiredArgsConstructor;
-import org.bigs.interceptor.LoggingFetchInterceptor;
+import org.bigs.util.interceptor.LoggingFetchInterceptor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.client.RestTemplate;

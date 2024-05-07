@@ -1,4 +1,4 @@
-package org.bigs.interceptor;
+package org.bigs.util.interceptor;
 
 import org.springframework.http.HttpRequest;
 import org.springframework.http.client.ClientHttpRequestExecution;
