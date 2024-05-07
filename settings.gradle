@@ -1,2 +1,3 @@
 rootProject.name = 'bigs-test'
+include 'bigs-domain'
 
