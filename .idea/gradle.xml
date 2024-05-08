@@ -8,6 +8,9 @@
         <option name="modules">
           <set>
             <option value="$PROJECT_DIR$" />
+            <option value="$PROJECT_DIR$/bigs-api" />
+            <option value="$PROJECT_DIR$/bigs-domain" />
+            <option value="$PROJECT_DIR$/bigs-util" />
           </set>
         </option>
       </GradleProjectSettings>
