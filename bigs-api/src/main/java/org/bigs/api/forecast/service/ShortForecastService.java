@@ -140,6 +140,8 @@ public class ShortForecastService {
             throw new Error("서버문제 발생!");
         }
 
+        if(kakaoLocalRes.documents.size() == 0) throw new Error("해당 위치 정보를 찾을 수 없습니다!! 검색된 지역명::: " + local );
+
         double searchLocalX = kakaoLocalRes.documents.get(0).getX();
         double searchLocalY = kakaoLocalRes.documents.get(0).getY();
         // 위도: latitude y축, 경도: longitude x축
@@ -192,6 +194,8 @@ public class ShortForecastService {
         }catch(RestClientException e){
             throw new Error("서버문제 발생!");
         }
+
+        if(kakaoLocalRes.documents.size() == 0) throw new Error("해당 위치 정보를 찾을 수 없습니다!! 검색된 지역명::: " + local );
 
         double searchLocalX = kakaoLocalRes.documents.get(0).getX();
         double searchLocalY = kakaoLocalRes.documents.get(0).getY();
