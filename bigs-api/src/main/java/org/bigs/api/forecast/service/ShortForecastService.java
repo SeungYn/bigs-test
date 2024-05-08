@@ -5,6 +5,7 @@ import org.bigs.api.forecast.dto.ShortForecastDTO;
 import org.bigs.domain.forecast.common.ForecastCategory;
 import org.bigs.domain.forecast.entity.ShortForecast;
 import org.bigs.domain.forecast.repository.ShortForecastRepository;
+import org.bigs.util.fetch.ForecastConfig;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -22,6 +23,7 @@ public class ShortForecastService {
     public static final String[] TIME_LIST = {"0200", "0500", "0800", "1100","1400","1700","2000","2300"};
     private final RestTemplate restTemplate;
     private final ShortForecastRepository shortForecastRepository;
+    private final ForecastConfig forecastConfig;
 
     public List<ShortForecastDTO.ShortForecastRes> getMunchungroShortForecast(){
         LocalDateTime now = LocalDateTime.now();
@@ -56,25 +58,19 @@ public class ShortForecastService {
 
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity request = new HttpEntity<>(headers);
-        UriComponentsBuilder builder = UriComponentsBuilder.newInstance()
-                .scheme("http")
-                .host("apis.data.go.kr")
-                .path("/1360000/VilageFcstInfoService_2.0/getVilageFcst")
-                .queryParam("ServiceKey", "9SpFR2/nELWRsR606KznXxUyxq/fKoZfiJgVrdOFHfhHtGbErI9MhPVJVsTblmwXHbpaYMCj/hSZs0vxEgZj9g==")
+        UriComponentsBuilder builder = forecastConfig.openAPIUriBuilder()
                 .queryParam("numOfRows", "266")
                 .queryParam("pageNo", "1")
                 .queryParam("base_date", formatedNow[0])
                 .queryParam("base_time", baseTime)
                 .queryParam("nx", "61")
-                .queryParam("ny", "131")
-                .queryParam("dataType", "JSON");
-
+                .queryParam("ny", "131");
         UriComponents uri = builder.build();
-        System.out.println("uri:::: " + uri.toUri()); // toUri는 encode를 하지 않으면 인코딩이 되지 않는 uri를반환해줌
-        HttpEntity<String> request2 = new HttpEntity<>("requestDto", headers);
 
         ShortForecastDTO.ShortForecastOpenAPIRes shortForecastResp;
+
         try{
+            // toUri는 encode를 하지 않으면 인코딩이 되지 않는 uri를반환해줌
             ResponseEntity<ShortForecastDTO.ShortForecastOpenAPIRes> res = restTemplate.exchange(uri.toUri(), HttpMethod.GET, request, ShortForecastDTO.ShortForecastOpenAPIRes.class );
             System.out.println("res::" + res);
             shortForecastResp = res.getBody();

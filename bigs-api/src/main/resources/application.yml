@@ -20,3 +20,6 @@ spring:
     url: jdbc:mysql://localhost:3306/bigs?serverTimezone=UTC&characterEncoding=UTF-8
     username: root
     password: tmddbs3124
+
+openapi:
+  service-key: 9SpFR2/nELWRsR606KznXxUyxq/fKoZfiJgVrdOFHfhHtGbErI9MhPVJVsTblmwXHbpaYMCj/hSZs0vxEgZj9g==
