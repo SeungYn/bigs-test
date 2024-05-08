@@ -41,7 +41,7 @@ public class ShortForecastService {
 
         // 현재 날짜만 가져오도록 필터 및 단위 추가
         List<ShortForecastDTO.ShortForecastRes> shortForecasts = shortForecastRepository
-                .findByBaseDateAndBaseTime(formatedNow[0], findTime(Integer.parseInt(formatedNow[1])))
+                .findByBaseDateAndBaseTimeAndNxAndNy(formatedNow[0], findTime(Integer.parseInt(formatedNow[1])), 62, 130)
                 .stream()
                 .filter(item -> item.getFcstDate().equals(formatedNow[0]))
                 .map(item -> ShortForecastDTO.ShortForecastRes.builder()
@@ -73,8 +73,8 @@ public class ShortForecastService {
                 .queryParam("pageNo", "1")
                 .queryParam("base_date", formatedNow[0])
                 .queryParam("base_time", baseTime)
-                .queryParam("nx", "61")
-                .queryParam("ny", "131");
+                .queryParam("nx", "62")
+                .queryParam("ny", "130");
         UriComponents uri = builder.build();
 
         ShortForecastDTO.ShortForecastOpenAPIRes shortForecastResp;
@@ -126,7 +126,7 @@ public class ShortForecastService {
 
     // kakaoapi를 사용해 해당 지역의 위도, 경도를 구한 후
     // location db에서 nx, ny를 구한 후 해당 좌표의 날씨를 가져오는 메서드 구현 중...
-    public void getLocalShortForecast(String local){
+    public List<ShortForecastDTO.ShortForecastRes> getLocalShortForecast(String local){
         HttpHeaders kakaoHeaders = kakaoLocalConfig.getKakaoRequestHeader();
         UriComponents kakaoUrl = kakaoLocalConfig.openAPIUriBuilder(local);
         HttpEntity<KakaoLocalDTO.KakaoLocalAPIRes> kakaoHttpEntity = new HttpEntity<>(kakaoHeaders);
@@ -146,16 +146,137 @@ public class ShortForecastService {
 
         double[] yRange = GeoUtil.calculateLatitudeRange(searchLocalY);
         double[] xRange = GeoUtil.calculateLongitudeRange(searchLocalY, searchLocalX);
-        List<Location> locationCandidates = locationRepository.findCandidatesByLatitudeAndLongitude(yRange[1], yRange[0],xRange[1], xRange[0]);
+        List<Location> locationCandidates = locationRepository.findCandidatesByLatitudeAndLongitude(yRange[1], yRange[0],xRange[1], xRange[0]).stream()
+                .sorted((a,b)-> {
+                    double distanceA = GeoUtil.calculateDistance(searchLocalY, searchLocalX, a.getLongitude(), a.getLatitude());
+                    double distanceB = GeoUtil.calculateDistance(searchLocalY, searchLocalX, b.getLongitude(), b.getLatitude());
+                    return Double.compare(distanceA, distanceB);
+                } ).toList();
 
-        return;
+        int targetNx = locationCandidates.get(0).getGridX();
+        int targetNy = locationCandidates.get(0).getGridY();
+
+        LocalDateTime now = LocalDateTime.now();
+        String[] formatedNow = now.format(DateTimeFormatter.ofPattern("yyyyMMdd HHmm")).split(" ");
+
+        // 현재 날짜만 가져오도록 필터 및 단위 추가
+        List<ShortForecastDTO.ShortForecastRes> shortForecasts = shortForecastRepository
+                .findByBaseDateAndBaseTimeAndNxAndNy(formatedNow[0], findTime(Integer.parseInt(formatedNow[1])), targetNx, targetNy)
+                .stream()
+                .filter(item -> item.getFcstDate().equals(formatedNow[0]))
+                .map(item -> ShortForecastDTO.ShortForecastRes.builder()
+                        .baseTime(item.getBaseTime())
+                        .fcstValue(ForecastCategory.getCodeValue(item.getCategory(), item.getFcstValue()) + ForecastCategory.valueOf(item.getCategory()).getUnit())
+                        .baseDate(item.getBaseDate())
+                        .nx(item.getNx())
+                        .ny(item.getNy())
+                        .category(ForecastCategory.valueOf(item.getCategory()).getName())
+                        .fcstDate(item.getFcstDate())
+                        .fcstTime(item.getFcstTime())
+                        .build())
+                .toList();
+
+
+        return shortForecasts;
+    }
+
+    public Boolean loadLocalForecast(String local){
+        HttpHeaders kakaoHeaders = kakaoLocalConfig.getKakaoRequestHeader();
+        UriComponents kakaoUrl = kakaoLocalConfig.openAPIUriBuilder(local);
+        HttpEntity<KakaoLocalDTO.KakaoLocalAPIRes> kakaoHttpEntity = new HttpEntity<>(kakaoHeaders);
+
+        KakaoLocalDTO.KakaoLocalAPIRes kakaoLocalRes;
+        try{
+            ResponseEntity<KakaoLocalDTO.KakaoLocalAPIRes> localResEntity = restTemplate.exchange(kakaoUrl.encode().toUri(), HttpMethod.GET, kakaoHttpEntity, KakaoLocalDTO.KakaoLocalAPIRes.class);
+            kakaoLocalRes = localResEntity.getBody();
+        }catch(RestClientException e){
+            throw new Error("서버문제 발생!");
+        }
+
+        double searchLocalX = kakaoLocalRes.documents.get(0).getX();
+        double searchLocalY = kakaoLocalRes.documents.get(0).getY();
+        // 위도: latitude y축, 경도: longitude x축
+
+        double[] yRange = GeoUtil.calculateLatitudeRange(searchLocalY);
+        double[] xRange = GeoUtil.calculateLongitudeRange(searchLocalY, searchLocalX);
+        List<Location> locationCandidates = locationRepository.findCandidatesByLatitudeAndLongitude(yRange[1], yRange[0],xRange[1], xRange[0]).stream()
+                .sorted((a,b)-> {
+                    double distanceA = GeoUtil.calculateDistance(searchLocalY, searchLocalX, a.getLongitude(), a.getLatitude());
+                    double distanceB = GeoUtil.calculateDistance(searchLocalY, searchLocalX, b.getLongitude(), b.getLatitude());
+                    return Double.compare(distanceA, distanceB);
+                } ).toList();
+
+        int targetNx = locationCandidates.get(0).getGridX();
+        int targetNy = locationCandidates.get(0).getGridY();
+
+        LocalDateTime now = LocalDateTime.now();
+        String[] formatedNow = now.format(DateTimeFormatter.ofPattern("yyyyMMdd HHmm")).split(" ");
+        String baseTime = findTime(Integer.parseInt(formatedNow[1]));
+        HttpHeaders headers = new HttpHeaders();
+
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity request = new HttpEntity<>(headers);
+        UriComponentsBuilder builder = forecastConfig.openAPIUriBuilder()
+                .queryParam("numOfRows", "266")
+                .queryParam("pageNo", "1")
+                .queryParam("base_date", formatedNow[0])
+                .queryParam("base_time", baseTime)
+                .queryParam("nx", targetNx)
+                .queryParam("ny", targetNy);
+        UriComponents uri = builder.build();
+
+        ShortForecastDTO.ShortForecastOpenAPIRes shortForecastResp;
+
+        try{
+            // toUri는 encode를 하지 않으면 인코딩이 되지 않는 uri를반환해줌
+            ResponseEntity<ShortForecastDTO.ShortForecastOpenAPIRes> res = restTemplate.exchange(uri.toUri(), HttpMethod.GET, request, ShortForecastDTO.ShortForecastOpenAPIRes.class );
+            shortForecastResp = res.getBody();
+
+        }catch(Exception e){
+            log.info("openapi 요청 에러 발생! {}" , e);
+            ResponseEntity<String> res = restTemplate.exchange(uri.toUri(), HttpMethod.GET, request, String.class );
+            log.info("openapi 요청 string 결과:: {}", res);
+            return false;
+        }
+
+
+        if(!shortForecastResp.response.header.resultCode.equals("00")){
+            log.info("api 요청에러 에러코드::: {}", shortForecastResp.response.header.resultCode);
+            log.info("api 요청에러 에러결과::: {}", shortForecastResp.response);
+            return false;
+        }
+
+
+        shortForecastResp.response.body.items.item.forEach(item -> {
+            ShortForecast shortForecast = shortForecastRepository.findByShortForecast(item.getBaseDate(), item.getBaseTime(),item.getCategory(), item.getFcstDate(), item.getFcstTime(), item.getNx(), item.getNy()).orElse(null);
+            if(shortForecast == null){
+                ShortForecast forecastObj = ShortForecast.builder()
+                        .nx(item.getNx())
+                        .ny(item.getNy())
+                        .fcstDate(item.getFcstDate())
+                        .fcstTime(item.getFcstTime())
+                        .fcstValue(item.getFcstValue())
+                        .baseDate(item.getBaseDate())
+                        .baseTime(item.getBaseTime())
+                        .category(item.getCategory())
+                        .build();
+                shortForecastRepository.save(forecastObj);
+            }else{
+                shortForecast.updateFcstValue(item.getFcstValue());
+                shortForecastRepository.save(shortForecast);
+            }
+
+
+        });
+
+        return true;
     }
 
 
     public String findTime(int now){
         int end = TIME_LIST.length - 1;
         int start = 0;
-        String result = "";
+        String result = "0200";
 
         while(start <= end){
             int mid = (start + end) / 2;
