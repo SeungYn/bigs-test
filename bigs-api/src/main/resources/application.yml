@@ -23,3 +23,5 @@ spring:
 
 openapi:
   service-key: 9SpFR2/nELWRsR606KznXxUyxq/fKoZfiJgVrdOFHfhHtGbErI9MhPVJVsTblmwXHbpaYMCj/hSZs0vxEgZj9g==
+kakaoapi:
+  service-key: KakaoAK 43c32947c7d074f49d0ddb921801672a
