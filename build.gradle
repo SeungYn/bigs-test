@@ -50,12 +50,13 @@ project(":bigs-domain") {
     }
 }
 
-project(":bigs-domain") {
+project(":bigs-api") {
     bootJar.enabled = true
     jar.enabled = false
 
     dependencies {
         implementation project(":bigs-domain")
+        implementation project(":bigs-util")
         implementation 'org.springframework.boot:spring-boot-starter-web'
     }
 }
