@@ -14,5 +14,5 @@ public interface ShortForecastRepository extends JpaRepository<ShortForecast, Lo
             , nativeQuery = true)
     Optional<ShortForecast> findByShortForecast(@Param("baseDate") String baseDate, @Param("baseTime") String baseTime, @Param("category") String category, @Param("fcstDate") String fcstDate, @Param("fcstTime") String fcstTime, @Param("nx") Integer nx, @Param("ny") Integer ny);
 
-    List<ShortForecast> findByBaseDateAndBaseTime(String baseDate, String baseTime);
+    List<ShortForecast> findByBaseDateAndBaseTimeAndNxAndNy(String baseDate, String baseTime, Integer nx, Integer ny);
 }
