@@ -22,6 +22,6 @@ spring:
     password: tmddbs3124
 
 openapi:
-  service-key: api키
+  service-key: apikey
 kakaoapi:
-  service-key: api키
+  service-key: apikey
