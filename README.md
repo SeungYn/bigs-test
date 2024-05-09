@@ -36,8 +36,8 @@
 ⚠️ 해결과정
 ---
   1. ### restTemplate 사용시 키가 잘 못 되었다는 문제
-    restTemplate에 url을 String으로 전달 시 자동으로 인코딩을 해주는데 인코딩 과정에서 +는 인코딩이 안되는 것을 발견 
-    하지만 uriComponents를 사용하면 인코딩이 안된 url로 요청을 하기 떄문에 이를 사용하여 해결했습니다.
+    restTemplate에 url을 String으로 전달 시 자동으로 인코딩을 해주는데 인코딩 과정에서 +는 인코딩이 안 되는 것을 발견 
+    하지만 UriComponentsBuilder를 encode(true)를 해주면 인코딩을 해주지 않기 때문에 이를 통해 인코딩된 키값을 넣어준 후 해결했습니다.
 
   2. ### 멀티모듈에서 빈을 찾지 못하는 문제
     
