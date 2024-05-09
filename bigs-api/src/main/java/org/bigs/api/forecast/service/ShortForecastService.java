@@ -20,6 +20,7 @@ import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
 
 
+import java.net.URI;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -76,12 +77,11 @@ public class ShortForecastService {
                 .queryParam("base_time", baseTime)
                 .queryParam("nx", "62")
                 .queryParam("ny", "130");
-        UriComponents uri = builder.build();
+        UriComponents uri = builder.build(true); // build시 true를 설정하면 인코딩을 진행하지 않음
 
         ShortForecastDTO.ShortForecastOpenAPIRes shortForecastResp;
 
         try{
-            // toUri는 encode를 하지 않으면 인코딩이 되지 않는 uri를반환해줌
             ResponseEntity<ShortForecastDTO.ShortForecastOpenAPIRes> res = restTemplate.exchange(uri.toUri(), HttpMethod.GET, request, ShortForecastDTO.ShortForecastOpenAPIRes.class );
             shortForecastResp = res.getBody();
 
@@ -190,12 +190,11 @@ public class ShortForecastService {
                 .queryParam("base_time", baseTime)
                 .queryParam("nx", targetNx)
                 .queryParam("ny", targetNy);
-        UriComponents uri = builder.build();
+        UriComponents uri = builder.build(true); // build시 true를 설정하면 인코딩을 진행하지 않음
 
         ShortForecastDTO.ShortForecastOpenAPIRes shortForecastResp;
 
         try{
-            // toUri는 encode를 하지 않으면 인코딩이 되지 않는 uri를반환해줌
             ResponseEntity<ShortForecastDTO.ShortForecastOpenAPIRes> res = restTemplate.exchange(uri.toUri(), HttpMethod.GET, request, ShortForecastDTO.ShortForecastOpenAPIRes.class );
             shortForecastResp = res.getBody();
 
