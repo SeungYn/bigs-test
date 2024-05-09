@@ -45,7 +45,7 @@
     Parameter 0 of constructor in com.bigs.controller.ForecastController required a bean of type 'repository.ShortForecastRepository' that could not be found.
     
     모듈을 기준으로 컴포넌트 스캔을 진행하기 때문에 다른 모듈의 빈을 찾으려면 basePackage를 설정해야 된다는 것을 알았습니다.
-    @ComponentScan, @EntityScan, @EnableJpaRepositories를 사용하여 basePackage를 명시애 해결했습니다.
+    @ComponentScan, @EntityScan, @EnableJpaRepositories를 사용하여 basePackage를 명시해 해결했습니다.
 
 
 
