@@ -36,6 +36,7 @@ public class ShortForecastService {
     private final KakaoLocalConfig kakaoLocalConfig;
 
     public List<ShortForecastDTO.ShortForecastRes> getMunchungroShortForecast(){
+
         LocalDateTime now = LocalDateTime.now();
         String[] formatedNow = now.format(DateTimeFormatter.ofPattern("yyyyMMdd HHmm")).split(" ");
 
@@ -124,39 +125,18 @@ public class ShortForecastService {
         return true;
     }
 
-    // kakaoapi를 사용해 해당 지역의 위도, 경도를 구한 후
-    // location db에서 nx, ny를 구한 후 해당 좌표의 날씨를 가져오는 메서드 구현 중...
     public List<ShortForecastDTO.ShortForecastRes> getLocalShortForecast(String local){
-        HttpHeaders kakaoHeaders = kakaoLocalConfig.getKakaoRequestHeader();
-        UriComponents kakaoUrl = kakaoLocalConfig.openAPIUriBuilder(local);
-        HttpEntity<KakaoLocalDTO.KakaoLocalAPIRes> kakaoHttpEntity = new HttpEntity<>(kakaoHeaders);
-
-
-        KakaoLocalDTO.KakaoLocalAPIRes kakaoLocalRes;
-        try{
-            ResponseEntity<KakaoLocalDTO.KakaoLocalAPIRes> localResEntity = restTemplate.exchange(kakaoUrl.encode().toUri(), HttpMethod.GET, kakaoHttpEntity, KakaoLocalDTO.KakaoLocalAPIRes.class);
-            kakaoLocalRes = localResEntity.getBody();
-        }catch(RestClientException e){
-            throw new Error("서버문제 발생!");
-        }
-
-        if(kakaoLocalRes.documents.size() == 0) throw new Error("해당 위치 정보를 찾을 수 없습니다!! 검색된 지역명::: " + local );
-
-        double searchLocalX = kakaoLocalRes.documents.get(0).getX();
-        double searchLocalY = kakaoLocalRes.documents.get(0).getY();
+        // 카카오 api를 이용해 위도 경도 불러오기
         // 위도: latitude y축, 경도: longitude x축
+        double[] searchLocalGeo = getGeolocationByKakaoAPI(local);
+        double searchLocalX = searchLocalGeo[0];
+        double searchLocalY = searchLocalGeo[1];
 
-        double[] yRange = GeoUtil.calculateLatitudeRange(searchLocalY);
-        double[] xRange = GeoUtil.calculateLongitudeRange(searchLocalY, searchLocalX);
-        List<Location> locationCandidates = locationRepository.findCandidatesByLatitudeAndLongitude(yRange[1], yRange[0],xRange[1], xRange[0]).stream()
-                .sorted((a,b)-> {
-                    double distanceA = GeoUtil.calculateDistance(searchLocalY, searchLocalX, a.getLongitude(), a.getLatitude());
-                    double distanceB = GeoUtil.calculateDistance(searchLocalY, searchLocalX, b.getLongitude(), b.getLatitude());
-                    return Double.compare(distanceA, distanceB);
-                } ).toList();
 
-        int targetNx = locationCandidates.get(0).getGridX();
-        int targetNy = locationCandidates.get(0).getGridY();
+        // 위도, 경도로 nx, ny 좌표 구하기
+        int[] targetNxNy = findLocationNxNy(searchLocalX, searchLocalY);
+        int targetNx = targetNxNy[0];
+        int targetNy = targetNxNy[1];
 
         LocalDateTime now = LocalDateTime.now();
         String[] formatedNow = now.format(DateTimeFormatter.ofPattern("yyyyMMdd HHmm")).split(" ");
@@ -183,38 +163,21 @@ public class ShortForecastService {
     }
 
     public Boolean loadLocalForecast(String local){
-        HttpHeaders kakaoHeaders = kakaoLocalConfig.getKakaoRequestHeader();
-        UriComponents kakaoUrl = kakaoLocalConfig.openAPIUriBuilder(local);
-        HttpEntity<KakaoLocalDTO.KakaoLocalAPIRes> kakaoHttpEntity = new HttpEntity<>(kakaoHeaders);
-
-        KakaoLocalDTO.KakaoLocalAPIRes kakaoLocalRes;
-        try{
-            ResponseEntity<KakaoLocalDTO.KakaoLocalAPIRes> localResEntity = restTemplate.exchange(kakaoUrl.encode().toUri(), HttpMethod.GET, kakaoHttpEntity, KakaoLocalDTO.KakaoLocalAPIRes.class);
-            kakaoLocalRes = localResEntity.getBody();
-        }catch(RestClientException e){
-            throw new Error("서버문제 발생!");
-        }
-
-        if(kakaoLocalRes.documents.size() == 0) throw new Error("해당 위치 정보를 찾을 수 없습니다!! 검색된 지역명::: " + local );
-
-        double searchLocalX = kakaoLocalRes.documents.get(0).getX();
-        double searchLocalY = kakaoLocalRes.documents.get(0).getY();
+        // 카카오 api를 이용해 위도 경도 불러오기
         // 위도: latitude y축, 경도: longitude x축
+        double[] searchLocalGeo = getGeolocationByKakaoAPI(local);
+        double searchLocalX = searchLocalGeo[0];
+        double searchLocalY = searchLocalGeo[1];
 
-        double[] yRange = GeoUtil.calculateLatitudeRange(searchLocalY);
-        double[] xRange = GeoUtil.calculateLongitudeRange(searchLocalY, searchLocalX);
-        List<Location> locationCandidates = locationRepository.findCandidatesByLatitudeAndLongitude(yRange[1], yRange[0],xRange[1], xRange[0]).stream()
-                .sorted((a,b)-> {
-                    double distanceA = GeoUtil.calculateDistance(searchLocalY, searchLocalX, a.getLongitude(), a.getLatitude());
-                    double distanceB = GeoUtil.calculateDistance(searchLocalY, searchLocalX, b.getLongitude(), b.getLatitude());
-                    return Double.compare(distanceA, distanceB);
-                } ).toList();
 
-        int targetNx = locationCandidates.get(0).getGridX();
-        int targetNy = locationCandidates.get(0).getGridY();
+        // 위도, 경도로 nx, ny 좌표 구하기
+        int[] targetNxNy = findLocationNxNy(searchLocalX, searchLocalY);
+        int targetNx = targetNxNy[0];
+        int targetNy = targetNxNy[1];
 
         LocalDateTime now = LocalDateTime.now();
         String[] formatedNow = now.format(DateTimeFormatter.ofPattern("yyyyMMdd HHmm")).split(" ");
+
         String baseTime = findTime(Integer.parseInt(formatedNow[1]));
         HttpHeaders headers = new HttpHeaders();
 
@@ -276,6 +239,42 @@ public class ShortForecastService {
         return true;
     }
 
+    public double[] getGeolocationByKakaoAPI(String local){
+        HttpHeaders kakaoHeaders = kakaoLocalConfig.getKakaoRequestHeader();
+        UriComponents kakaoUrl = kakaoLocalConfig.openAPIUriBuilder(local);
+        HttpEntity<KakaoLocalDTO.KakaoLocalAPIRes> kakaoHttpEntity = new HttpEntity<>(kakaoHeaders);
+
+        KakaoLocalDTO.KakaoLocalAPIRes kakaoLocalRes;
+        try{
+            ResponseEntity<KakaoLocalDTO.KakaoLocalAPIRes> localResEntity = restTemplate.exchange(kakaoUrl.encode().toUri(), HttpMethod.GET, kakaoHttpEntity, KakaoLocalDTO.KakaoLocalAPIRes.class);
+            kakaoLocalRes = localResEntity.getBody();
+        }catch(RestClientException e){
+            throw new Error("서버문제 발생!");
+        }
+
+        if(kakaoLocalRes.documents.size() == 0) throw new Error("해당 위치 정보를 찾을 수 없습니다!! 검색된 지역명::: " + local );
+
+        double searchLocalX = kakaoLocalRes.documents.get(0).getX();
+        double searchLocalY = kakaoLocalRes.documents.get(0).getY();
+
+        return new double[]{searchLocalX,searchLocalY };
+    }
+
+    public int[] findLocationNxNy(double searchLocalX, double searchLocalY){
+        double[] yRange = GeoUtil.calculateLatitudeRange(searchLocalY);
+        double[] xRange = GeoUtil.calculateLongitudeRange(searchLocalY, searchLocalX);
+        List<Location> locationCandidates = locationRepository.findCandidatesByLatitudeAndLongitude(yRange[1], yRange[0],xRange[1], xRange[0]).stream()
+                .sorted((a,b)-> {
+                    double distanceA = GeoUtil.calculateDistance(searchLocalY, searchLocalX, a.getLongitude(), a.getLatitude());
+                    double distanceB = GeoUtil.calculateDistance(searchLocalY, searchLocalX, b.getLongitude(), b.getLatitude());
+                    return Double.compare(distanceA, distanceB);
+                } ).toList();
+
+        int targetNx = locationCandidates.get(0).getGridX();
+        int targetNy = locationCandidates.get(0).getGridY();
+
+        return new int[] {targetNx, targetNy};
+    }
 
     public String findTime(int now){
         int end = TIME_LIST.length - 1;
