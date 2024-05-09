@@ -26,7 +26,6 @@ public class KakaoLocalConfig {
     }
 
     public HttpHeaders getKakaoRequestHeader(){
-        System.out.println(serviceKey);
         HttpHeaders kakaoHeader = new org.springframework.http.HttpHeaders();
         kakaoHeader.set("Authorization", serviceKey);
         kakaoHeader.setContentType(MediaType.APPLICATION_JSON);
